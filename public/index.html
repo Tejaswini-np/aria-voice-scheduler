@@ -549,9 +549,31 @@
 
   <div class="footer">ARIA v1.0 · Powered by OpenAI Realtime + Google Calendar</div>
 
+  <!-- Debug Panel -->
+  <div style="width:100%;background:#0a0f1a;border:1px solid rgba(255,100,100,0.2);border-radius:12px;padding:12px;font-family:'DM Mono',monospace;font-size:11px;">
+    <div style="color:#f87171;margin-bottom:8px;font-size:10px;letter-spacing:0.1em;">DEBUG LOG</div>
+    <div id="debugLog" style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;color:#6b7db3;">
+      <span>Waiting for session start…</span>
+    </div>
+  </div>
+
 </div>
 
 <script>
+// ─── Debug logger ─────────────────────────────────────────────────────────────
+function dbg(msg, color = '#6b7db3') {
+  console.log(msg);
+  const log = document.getElementById('debugLog');
+  if (!log) return;
+  const line = document.createElement('span');
+  line.style.color = color;
+  line.textContent = new Date().toLocaleTimeString('en-US', {hour12:false}) + ' ' + msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+  // Keep only last 30 lines
+  while (log.children.length > 30) log.removeChild(log.firstChild);
+}
+
 // ─── State ────────────────────────────────────────────────────────────────────
 let ws = null;
 let audioContext = null;
@@ -654,10 +676,43 @@ function playPCM16Chunk(base64Audio) {
   nextPlayTime = startAt + buffer.duration;
 }
 
+// ─── Safe base64 encoder (avoids call stack overflow on large buffers) ─────────
+function toBase64(uint8array) {
+  let binary = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < uint8array.length; i += chunkSize) {
+    binary += String.fromCharCode(...uint8array.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+// ─── Downsample float32 audio to 24kHz PCM16 ─────────────────────────────────
+function downsampleTo24k(float32, inputSampleRate) {
+  if (inputSampleRate === 24000) {
+    const pcm16 = new Int16Array(float32.length);
+    for (let i = 0; i < float32.length; i++) {
+      const s = Math.max(-1, Math.min(1, float32[i]));
+      pcm16[i] = s < 0 ? s * 32768 : s * 32767;
+    }
+    return pcm16;
+  }
+  // Resample: pick every Nth sample
+  const ratio = inputSampleRate / 24000;
+  const outLength = Math.floor(float32.length / ratio);
+  const pcm16 = new Int16Array(outLength);
+  for (let i = 0; i < outLength; i++) {
+    const s = Math.max(-1, Math.min(1, float32[Math.floor(i * ratio)]));
+    pcm16[i] = s < 0 ? s * 32768 : s * 32767;
+  }
+  return pcm16;
+}
+
 // ─── Microphone capture ───────────────────────────────────────────────────────
 async function startMicrophone() {
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 24000, channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    });
     document.getElementById('permWarn').classList.remove('visible');
   } catch (err) {
     console.error('Mic error:', err);
@@ -665,29 +720,22 @@ async function startMicrophone() {
     setStatus('Mic access denied', 'error');
     throw err;
   }
-  
+
   const source = audioContext.createMediaStreamSource(mediaStream);
-  
-  // Use ScriptProcessor for broad compatibility
+  const inputSampleRate = audioContext.sampleRate; // whatever the browser gives us
+  console.log('Mic sample rate:', inputSampleRate);
+
   const bufferSize = 4096;
   processorNode = audioContext.createScriptProcessor(bufferSize, 1, 1);
-  
+
   processorNode.onaudioprocess = (e) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    
     const float32 = e.inputBuffer.getChannelData(0);
-    
-    // Resample to 24kHz if needed (usually matches since we requested 24000)
-    const pcm16 = new Int16Array(float32.length);
-    for (let i = 0; i < float32.length; i++) {
-      const s = Math.max(-1, Math.min(1, float32[i]));
-      pcm16[i] = s < 0 ? s * 32768 : s * 32767;
-    }
-    
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(pcm16.buffer)));
+    const pcm16 = downsampleTo24k(float32, inputSampleRate);
+    const base64 = toBase64(new Uint8Array(pcm16.buffer));
     ws.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: base64 }));
   };
-  
+
   source.connect(processorNode);
   processorNode.connect(audioContext.destination);
 }
@@ -700,6 +748,8 @@ async function toggleSession() {
 
 async function startSession() {
   initAudioContext();
+  dbg('AudioContext state: ' + audioContext.state, '#a78bfa');
+  dbg('Connecting to WebSocket…', '#4f8cff');
   
   setStatus('Connecting…', '');
   document.getElementById('mainBtn').textContent = '⏳ Connecting';
@@ -707,15 +757,22 @@ async function startSession() {
   
   const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
   const wsUrl = `${protocol}://${location.host}`;
+  dbg('WS URL: ' + wsUrl, '#4f8cff');
   
   ws = new WebSocket(wsUrl);
   ws.binaryType = 'arraybuffer';
   
   ws.onopen = async () => {
+    dbg('✅ WebSocket opened', '#34d399');
     isConnected = true;
     try {
+      dbg('Requesting microphone…', '#4f8cff');
       await startMicrophone();
-    } catch (e) { return; }
+      dbg('✅ Microphone active, sample rate: ' + audioContext.sampleRate, '#34d399');
+    } catch (e) {
+      dbg('❌ Mic error: ' + e.message, '#f87171');
+      return;
+    }
     
     setStatus('Connected — listening', 'connected');
     document.getElementById('mainBtn').style.display = 'none';
@@ -725,16 +782,19 @@ async function startSession() {
   
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
+    if (msg.type !== 'response.audio.delta') dbg('← ' + msg.type, '#6b7db3');
     handleMessage(msg);
   };
   
   ws.onerror = (err) => {
+    dbg('❌ WS error: ' + (err.message || 'no message'), '#f87171');
     console.error('WS error', err);
     setStatus('Connection error', 'error');
     cleanup();
   };
   
-  ws.onclose = () => {
+  ws.onclose = (e) => {
+    dbg('WS closed — code:' + e.code + ' reason:' + (e.reason || 'none'), '#f87171');
     if (isConnected) { setStatus('Disconnected', ''); cleanup(); }
   };
 }
@@ -785,8 +845,10 @@ function handleMessage(msg) {
       break;
       
     case 'error':
-      console.error('Server error:', msg.message || msg.error?.message);
-      setStatus('Error: ' + (msg.message || 'Unknown'), 'error');
+      const errMsg = msg.error?.message || msg.message || JSON.stringify(msg);
+      dbg('❌ OpenAI error: ' + errMsg, '#f87171');
+      console.error('Server error:', errMsg);
+      setStatus('Error: ' + errMsg.slice(0, 40), 'error');
       break;
   }
 }
