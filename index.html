@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ARIA — Voice Scheduling Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #060810;
+    --surface: #0d1120;
+    --border: rgba(120,160,255,0.12);
+    --accent: #4f8cff;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --red: #f87171;
+    --text: #e8eeff;
+    --muted: #6b7db3;
+    --glow: rgba(79,140,255,0.25);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(79,140,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,140,255,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Radial glow blobs */
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(100px);
+    pointer-events: none;
+    z-index: 0;
+    animation: drift 12s ease-in-out infinite alternate;
+  }
+  .blob-1 {
+    width: 400px; height: 400px;
+    background: rgba(79,140,255,0.08);
+    top: -100px; left: -100px;
+  }
+  .blob-2 {
+    width: 500px; height: 500px;
+    background: rgba(167,139,250,0.06);
+    bottom: -150px; right: -150px;
+    animation-delay: -6s;
+  }
+  @keyframes drift {
+    from { transform: translate(0,0) scale(1); }
+    to { transform: translate(40px, 30px) scale(1.1); }
+  }
+
+  /* Main container */
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 480px;
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 20px rgba(79,140,255,0.4);
+  }
+  .logo-name {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+    letter-spacing: 0.08em;
+    background: linear-gradient(135deg, #fff 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .tagline {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Voice orb */
+  .orb-wrapper {
+    position: relative;
+    width: 180px; height: 180px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .orb-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    animation: ring-pulse 3s ease-in-out infinite;
+  }
+  .orb-ring:nth-child(1) { width: 100%; height: 100%; border-color: rgba(79,140,255,0.12); animation-delay: 0s; }
+  .orb-ring:nth-child(2) { width: 82%; height: 82%; border-color: rgba(79,140,255,0.2); animation-delay: 0.4s; }
+  .orb-ring:nth-child(3) { width: 64%; height: 64%; border-color: rgba(79,140,255,0.3); animation-delay: 0.8s; }
+
+  @keyframes ring-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.04); opacity: 1; }
+  }
+
+  .orb {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #6fa8ff, #2a5cff 60%, #1a1f6e);
+    box-shadow:
+      0 0 40px rgba(79,140,255,0.5),
+      0 0 80px rgba(79,140,255,0.2),
+      inset 0 0 30px rgba(255,255,255,0.1);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    z-index: 1;
+  }
+
+  .orb:hover {
+    transform: scale(1.05);
+    box-shadow:
+      0 0 60px rgba(79,140,255,0.7),
+      0 0 100px rgba(79,140,255,0.3),
+      inset 0 0 30px rgba(255,255,255,0.15);
+  }
+
+  .orb-icon {
+    font-size: 32px;
+    filter: drop-shadow(0 0 8px rgba(255,255,255,0.8));
+    transition: all 0.2s ease;
+  }
+
+  /* Speaking animation */
+  .orb.speaking {
+    animation: orb-speak 0.8s ease-in-out infinite alternate;
+    box-shadow:
+      0 0 60px rgba(79,140,255,0.8),
+      0 0 120px rgba(79,140,255,0.4),
+      inset 0 0 40px rgba(255,255,255,0.2);
+  }
+  @keyframes orb-speak {
+    from { transform: scale(1); }
+    to { transform: scale(1.08); }
+  }
+
+  /* Listening animation */
+  .orb.listening {
+    animation: orb-listen 1.2s ease-in-out infinite alternate;
+    background: radial-gradient(circle at 35% 35%, #9fffdb, #34d399 60%, #065f46);
+    box-shadow:
+      0 0 60px rgba(52,211,153,0.7),
+      0 0 100px rgba(52,211,153,0.3),
+      inset 0 0 30px rgba(255,255,255,0.15);
+  }
+  @keyframes orb-listen {
+    from { transform: scale(1); }
+    to { transform: scale(1.06); }
+  }
+
+  /* Sound wave bars */
+  .wave-bars {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 24px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .wave-bars.active { opacity: 1; }
+  .bar {
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: bar-bounce 0.8s ease-in-out infinite alternate;
+  }
+  .bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+  .bar:nth-child(2) { height: 16px; animation-delay: 0.1s; }
+  .bar:nth-child(3) { height: 22px; animation-delay: 0.2s; }
+  .bar:nth-child(4) { height: 14px; animation-delay: 0.3s; }
+  .bar:nth-child(5) { height: 20px; animation-delay: 0.15s; }
+  .bar:nth-child(6) { height: 10px; animation-delay: 0.25s; }
+  .bar:nth-child(7) { height: 18px; animation-delay: 0.05s; }
+  @keyframes bar-bounce {
+    from { transform: scaleY(0.3); }
+    to { transform: scaleY(1); }
+  }
+
+  /* Status */
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition: all 0.3s ease;
+    min-width: 200px;
+    justify-content: center;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: background 0.3s ease;
+  }
+  .status.connected .status-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status.listening .status-dot { background: var(--green); animation: blink 1s infinite; }
+  .status.speaking .status-dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .status.error .status-dot { background: var(--red); }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Transcript area */
+  .transcript-card {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .transcript-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .transcript-body {
+    padding: 16px;
+    max-height: 220px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-behavior: smooth;
+  }
+  .transcript-body::-webkit-scrollbar { width: 4px; }
+  .transcript-body::-webkit-scrollbar-track { background: transparent; }
+  .transcript-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .msg {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    animation: msg-in 0.3s ease;
+  }
+  @keyframes msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .msg-avatar {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    margin-top: 1px;
+  }
+  .msg.aria .msg-avatar { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  .msg.user .msg-avatar { background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.3); }
+
+  .msg-content { flex: 1; }
+  .msg-label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    margin-bottom: 3px;
+    letter-spacing: 0.05em;
+  }
+  .msg-text {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .msg.aria .msg-text { color: #c8d8ff; }
+
+  .empty-state {
+    text-align: center;
+    padding: 24px 0;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Event confirmation card */
+  .event-card {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(52,211,153,0.05), rgba(79,140,255,0.05));
+    border: 1px solid rgba(52,211,153,0.25);
+    border-radius: 16px;
+    padding: 20px;
+    display: none;
+    animation: card-in 0.5s ease;
+  }
+  .event-card.visible { display: block; }
+  @keyframes card-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+
+  .event-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .event-check {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(52,211,153,0.15);
+    border: 2px solid var(--green);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    color: var(--green);
+  }
+  .event-card-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 18px;
+    color: var(--green);
+  }
+  .event-card-sub {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .event-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .event-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+  .event-row-icon { width: 18px; text-align: center; opacity: 0.6; }
+  .event-row-val { color: var(--text); }
+
+  .event-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    padding: 8px 16px;
+    background: rgba(79,140,255,0.1);
+    border: 1px solid rgba(79,140,255,0.3);
+    border-radius: 8px;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.2s ease;
+  }
+  .event-link:hover {
+    background: rgba(79,140,255,0.2);
+    border-color: var(--accent);
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .btn {
+    padding: 10px 24px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #2a4fcf);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 4px 20px rgba(79,140,255,0.3);
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(79,140,255,0.45);
+    color: white;
+  }
+  .btn-danger { border-color: rgba(248,113,113,0.3); color: var(--red); }
+  .btn-danger:hover { background: rgba(248,113,113,0.1); border-color: var(--red); }
+
+  /* Footer */
+  .footer {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    text-align: center;
+    opacity: 0.6;
+  }
+
+  /* Permission warning */
+  .permission-warn {
+    width: 100%;
+    background: rgba(251,191,36,0.08);
+    border: 1px solid rgba(251,191,36,0.25);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: #fbbf24;
+    font-family: 'DM Mono', monospace;
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+  .permission-warn.visible { display: flex; }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-row">
+      <div class="logo-icon">📅</div>
+      <span class="logo-name">ARIA</span>
+    </div>
+    <div class="tagline">Automated Real-time Intelligence Assistant</div>
+  </div>
+
+  <!-- Voice Orb -->
+  <div class="orb-wrapper">
+    <div class="orb-ring"></div>
+    <div class="orb-ring"></div>
+    <div class="orb-ring"></div>
+    <div class="orb" id="orb" onclick="toggleSession()">
+      <span class="orb-icon" id="orbIcon">🎙️</span>
+    </div>
+  </div>
+
+  <!-- Sound wave -->
+  <div class="wave-bars" id="waveBars">
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div>
+  </div>
+
+  <!-- Status -->
+  <div class="status" id="status">
+    <div class="status-dot"></div>
+    <span id="statusText">Tap orb to start</span>
+  </div>
+
+  <!-- Permission warning -->
+  <div class="permission-warn" id="permWarn">
+    ⚠️ Microphone access required — please allow in browser popup
+  </div>
+
+  <!-- Controls -->
+  <div class="controls" id="controls">
+    <button class="btn btn-primary" id="mainBtn" onclick="toggleSession()">
+      <span>▶</span> Start Session
+    </button>
+    <button class="btn btn-danger" id="endBtn" onclick="endSession()" style="display:none">
+      ■ End
+    </button>
+  </div>
+
+  <!-- Transcript -->
+  <div class="transcript-card">
+    <div class="transcript-header">
+      <span>CONVERSATION</span>
+      <span id="transcriptCount">0 messages</span>
+    </div>
+    <div class="transcript-body" id="transcript">
+      <div class="empty-state">Session transcript will appear here…</div>
+    </div>
+  </div>
+
+  <!-- Event Created Card -->
+  <div class="event-card" id="eventCard">
+    <div class="event-card-header">
+      <div class="event-check">✓</div>
+      <div>
+        <div class="event-card-title">Event Created!</div>
+        <div class="event-card-sub">Google Calendar · Confirmed</div>
+      </div>
+    </div>
+    <div class="event-details" id="eventDetails"></div>
+    <a class="event-link" id="eventLink" href="#" target="_blank">
+      📅 View in Google Calendar ↗
+    </a>
+  </div>
+
+  <div class="footer">ARIA v1.0 · Powered by OpenAI Realtime + Google Calendar</div>
+
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let ws = null;
+let audioContext = null;
+let mediaStream = null;
+let processorNode = null;
+let isConnected = false;
+let msgCount = 0;
+let playbackQueue = [];
+let isPlaying = false;
+let nextPlayTime = 0;
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+function setStatus(text, cls = '') {
+  const el = document.getElementById('status');
+  el.className = 'status ' + cls;
+  document.getElementById('statusText').textContent = text;
+  
+  const orb = document.getElementById('orb');
+  orb.className = 'orb ' + (cls === 'speaking' ? 'speaking' : cls === 'listening' ? 'listening' : '');
+  
+  const waves = document.getElementById('waveBars');
+  waves.className = 'wave-bars ' + (cls === 'speaking' || cls === 'listening' ? 'active' : '');
+}
+
+function addMessage(role, text) {
+  const container = document.getElementById('transcript');
+  const empties = container.querySelectorAll('.empty-state');
+  empties.forEach(e => e.remove());
+  
+  msgCount++;
+  document.getElementById('transcriptCount').textContent = msgCount + ' message' + (msgCount !== 1 ? 's' : '');
+  
+  const isAria = role === 'assistant';
+  const div = document.createElement('div');
+  div.className = 'msg ' + (isAria ? 'aria' : 'user');
+  div.innerHTML = `
+    <div class="msg-avatar">${isAria ? '🤖' : '👤'}</div>
+    <div class="msg-content">
+      <div class="msg-label">${isAria ? 'ARIA' : 'YOU'}</div>
+      <div class="msg-text">${text}</div>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showEventCard(event, details) {
+  const card = document.getElementById('eventCard');
+  card.classList.add('visible');
+  
+  const start = new Date(event.start);
+  const formattedDate = start.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Chicago' });
+  const formattedTime = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' });
+  
+  document.getElementById('eventDetails').innerHTML = `
+    <div class="event-row"><span class="event-row-icon">📋</span><span class="event-row-val">${event.summary}</span></div>
+    <div class="event-row"><span class="event-row-icon">📅</span><span class="event-row-val">${formattedDate}</span></div>
+    <div class="event-row"><span class="event-row-icon">🕐</span><span class="event-row-val">${formattedTime} CT (1 hour)</span></div>
+    ${details.name ? `<div class="event-row"><span class="event-row-icon">👤</span><span class="event-row-val">${details.name}</span></div>` : ''}
+  `;
+  
+  document.getElementById('eventLink').href = event.link;
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ─── Audio playback (PCM16 → AudioContext) ────────────────────────────────────
+function initAudioContext() {
+  if (!audioContext) {
+    audioContext = new AudioContext({ sampleRate: 24000 });
+  }
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+}
+
+function playPCM16Chunk(base64Audio) {
+  if (!audioContext) return;
+  
+  const raw = atob(base64Audio);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  
+  // PCM16 little-endian → Float32
+  const samples = bytes.length / 2;
+  const float32 = new Float32Array(samples);
+  const view = new DataView(bytes.buffer);
+  for (let i = 0; i < samples; i++) {
+    float32[i] = view.getInt16(i * 2, true) / 32768.0;
+  }
+  
+  const buffer = audioContext.createBuffer(1, samples, 24000);
+  buffer.getChannelData(0).set(float32);
+  
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioContext.destination);
+  
+  const startAt = Math.max(audioContext.currentTime, nextPlayTime);
+  source.start(startAt);
+  nextPlayTime = startAt + buffer.duration;
+}
+
+// ─── Microphone capture ───────────────────────────────────────────────────────
+async function startMicrophone() {
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 24000, channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    document.getElementById('permWarn').classList.remove('visible');
+  } catch (err) {
+    console.error('Mic error:', err);
+    document.getElementById('permWarn').classList.add('visible');
+    setStatus('Mic access denied', 'error');
+    throw err;
+  }
+  
+  const source = audioContext.createMediaStreamSource(mediaStream);
+  
+  // Use ScriptProcessor for broad compatibility
+  const bufferSize = 4096;
+  processorNode = audioContext.createScriptProcessor(bufferSize, 1, 1);
+  
+  processorNode.onaudioprocess = (e) => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    
+    const float32 = e.inputBuffer.getChannelData(0);
+    
+    // Resample to 24kHz if needed (usually matches since we requested 24000)
+    const pcm16 = new Int16Array(float32.length);
+    for (let i = 0; i < float32.length; i++) {
+      const s = Math.max(-1, Math.min(1, float32[i]));
+      pcm16[i] = s < 0 ? s * 32768 : s * 32767;
+    }
+    
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(pcm16.buffer)));
+    ws.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: base64 }));
+  };
+  
+  source.connect(processorNode);
+  processorNode.connect(audioContext.destination);
+}
+
+// ─── WebSocket session ────────────────────────────────────────────────────────
+async function toggleSession() {
+  if (isConnected) { endSession(); return; }
+  startSession();
+}
+
+async function startSession() {
+  initAudioContext();
+  
+  setStatus('Connecting…', '');
+  document.getElementById('mainBtn').textContent = '⏳ Connecting';
+  document.getElementById('mainBtn').disabled = true;
+  
+  const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+  const wsUrl = `${protocol}://${location.host}`;
+  
+  ws = new WebSocket(wsUrl);
+  ws.binaryType = 'arraybuffer';
+  
+  ws.onopen = async () => {
+    isConnected = true;
+    try {
+      await startMicrophone();
+    } catch (e) { return; }
+    
+    setStatus('Connected — listening', 'connected');
+    document.getElementById('mainBtn').style.display = 'none';
+    document.getElementById('endBtn').style.display = '';
+    document.getElementById('orbIcon').textContent = '🎙️';
+  };
+  
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    handleMessage(msg);
+  };
+  
+  ws.onerror = (err) => {
+    console.error('WS error', err);
+    setStatus('Connection error', 'error');
+    cleanup();
+  };
+  
+  ws.onclose = () => {
+    if (isConnected) { setStatus('Disconnected', ''); cleanup(); }
+  };
+}
+
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'session.created':
+    case 'session.updated':
+      setStatus('Listening…', 'listening');
+      break;
+      
+    case 'input_audio_buffer.speech_started':
+      setStatus('Listening…', 'listening');
+      document.getElementById('orbIcon').textContent = '👂';
+      nextPlayTime = audioContext ? audioContext.currentTime : 0;
+      break;
+      
+    case 'input_audio_buffer.speech_stopped':
+      setStatus('Processing…', 'connected');
+      document.getElementById('orbIcon').textContent = '⏳';
+      break;
+      
+    case 'response.audio.delta':
+      setStatus('Speaking…', 'speaking');
+      document.getElementById('orbIcon').textContent = '🔊';
+      playPCM16Chunk(msg.delta);
+      break;
+      
+    case 'response.audio.done':
+      setStatus('Listening…', 'listening');
+      document.getElementById('orbIcon').textContent = '🎙️';
+      break;
+      
+    case 'conversation.item.input_audio_transcription.completed':
+      if (msg.transcript?.trim()) {
+        addMessage('user', msg.transcript.trim());
+      }
+      break;
+      
+    case 'response.audio_transcript.done':
+      if (msg.transcript?.trim()) {
+        addMessage('assistant', msg.transcript.trim());
+      }
+      break;
+      
+    case 'event_created':
+      showEventCard(msg.event, msg.details);
+      break;
+      
+    case 'error':
+      console.error('Server error:', msg.message || msg.error?.message);
+      setStatus('Error: ' + (msg.message || 'Unknown'), 'error');
+      break;
+  }
+}
+
+function endSession() {
+  isConnected = false;
+  setStatus('Session ended', '');
+  document.getElementById('mainBtn').innerHTML = '<span>▶</span> Start Session';
+  document.getElementById('mainBtn').style.display = '';
+  document.getElementById('mainBtn').disabled = false;
+  document.getElementById('endBtn').style.display = 'none';
+  document.getElementById('orbIcon').textContent = '🎙️';
+  cleanup();
+}
+
+function cleanup() {
+  if (processorNode) { processorNode.disconnect(); processorNode = null; }
+  if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+  if (ws && ws.readyState === WebSocket.OPEN) { ws.close(); }
+  ws = null;
+  nextPlayTime = 0;
+}
+
+// Check health on load
+fetch('/api/health').then(r => r.json()).then(data => {
+  if (!data.calendarConnected) {
+    const el = document.getElementById('permWarn');
+    el.textContent = '⚠️  Google Calendar not connected — visit /auth/google to authorize';
+    el.style.display = 'flex';
+    el.style.color = '#f87171';
+    el.style.borderColor = 'rgba(248,113,113,0.25)';
+  }
+}).catch(() => {});
+</script>
+</body>
+</html>
