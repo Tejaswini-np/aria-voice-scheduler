@@ -147,7 +147,7 @@ wss.on("connection", (clientWs, req) => {
   console.log("🎙️  Client connected");
 
   const OPENAI_WS_URL =
-    "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17";
+    "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview";
 
   let openaiWs = null;
   let sessionReady = false;
