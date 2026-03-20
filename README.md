@@ -132,7 +132,7 @@ From that point on, the refresh token is reused automatically.
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/tejaswini-popuri/aria-voice-scheduler.git
+git clone https://github.com/Tejaswini-np/aria-voice-scheduler.git
 cd aria-voice-scheduler
 
 # 2. Install dependencies
