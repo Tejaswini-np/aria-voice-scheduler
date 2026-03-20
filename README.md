@@ -5,37 +5,37 @@
 
 ---
 
-## ✨ What It Does
+## **What It Does**
 
 ARIA is a fully voice-driven scheduling agent. You speak to it in real-time — it asks for your name, preferred date and time, and a meeting title — then creates a confirmed Google Calendar event, all without touching a keyboard.
 
 **Conversation flow:**
-1. 👋 ARIA greets you and introduces herself
-2. 📝 Asks for your **name**
-3. 📅 Asks for your preferred **date** (understands "tomorrow", "next Monday", etc.)
-4. 🕐 Asks for your preferred **time** ("2pm", "3:30 in the afternoon")
-5. 💬 Optionally asks for a **meeting title**
-6. ✅ **Confirms** all details aloud before creating
-7. 📆 **Creates the Google Calendar event** and tells you it's done
+1. ARIA greets you and introduces herself
+2. Asks for your **name**
+3. Asks for your preferred **date** (understands "tomorrow", "next Monday", etc.)
+4. Asks for your preferred **time** ("2pm", "3:30 in the afternoon")
+5. Optionally asks for a **meeting title**
+6. Confirms all details aloud before creating
+7. Creates the Google Calendar event** and tells you it's done
 
 ---
 
-## 🔗 Deployed URL
+## **Deployed URL**
 
 > **https://aria-voice-scheduler.onrender.com**
 
-### How to Test
+### ** How to Test**
 
-1. Open the URL above in **Chrome or Edge** (best WebAudio support)
-2. Click the **glowing blue orb** (or "Start Session")
+1. Open the URL above in Chrome or Edge (best WebAudio support)
+2. Click the glowing blue orb (or "Start Session")
 3. Allow microphone access when prompted
-4. **Speak naturally** — ARIA will guide you through scheduling
+4. Speak naturally — ARIA will guide you through scheduling
 
-> 💡 **Tip:** Use a headset or earbuds to prevent mic feedback during ARIA's responses.
+Use a headset or earbuds to prevent mic feedback during ARIA's responses.
 
 ---
 
-## 🏗️ Architecture
+## **Architecture**
 
 ```
 Browser (WebRTC Mic)
@@ -64,7 +64,7 @@ Browser (WebRTC Mic)
 Browser (AudioContext playback + UI)
 ```
 
-### Tech Stack
+### **Tech Stack**
 
 | Layer | Technology |
 |-------|------------|
@@ -78,19 +78,19 @@ Browser (AudioContext playback + UI)
 
 ---
 
-## 📅 Calendar Integration Explained
+## **Calendar Integration Explained**
 
-### How It Works
+### **How It Works**
 
 The server uses the **Google Calendar API v3** through Google's official `googleapis` Node.js client. Authentication is handled via **OAuth2 with an offline refresh token** — so the server can create calendar events server-side without requiring the user to log in each time.
 
 **Event creation details:**
-- Duration: **1 hour** (adjustable in `server/index.js`)
-- Timezone: **America/Chicago** (Dallas/Plano CT — configurable)
-- Reminders: **15-minute popup + 60-minute email**
-- Calendar: **primary** (the authenticated user's main calendar)
+- Duration: 1 hour (adjustable in `server/index.js`)
+- Timezone: America/Chicago (Dallas/Plano CT — configurable)
+- Reminders: 15-minute popup + 60-minute email
+- Calendar: primary (the authenticated user's main calendar)
 
-### How the AI Calls the Calendar
+### **How the AI Calls the Calendar**
 
 The OpenAI Realtime model is given a **function/tool definition**:
 
@@ -120,15 +120,15 @@ From that point on, the refresh token is reused automatically.
 
 ---
 
-## 🚀 Run Locally
+## Run Locally
 
-### Prerequisites
+### **Prerequisites**
 
 - Node.js ≥ 18
 - An [OpenAI API key](https://platform.openai.com/api-keys) with Realtime API access
 - A [Google Cloud project](https://console.cloud.google.com) with Calendar API enabled
 
-### Setup
+### **Setup**
 
 ```bash
 # 1. Clone the repo
@@ -155,7 +155,7 @@ npm run dev
 # 6. Open http://localhost:3000
 ```
 
-### Environment Variables
+### **Environment Variables**
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -168,7 +168,7 @@ npm run dev
 
 ---
 
-## ☁️ Deploy to Render
+## **Deploy to Render**
 
 1. Fork this repo to your GitHub
 2. Go to [render.com](https://render.com) → New Web Service → connect your repo
@@ -181,7 +181,7 @@ npm run dev
 
 ---
 
-## 📸 Screenshots
+## **Screenshots**
 
 <img width="1440" height="900" alt="Screenshot 2026-03-19 at 3 41 52 PM" src="https://github.com/user-attachments/assets/567dec78-d9bc-42d8-8e62-bcf6535ba024" />
 
@@ -193,7 +193,7 @@ npm run dev
 
 ---
 
-## Project Structure
+## **Project Structure**
 
 aria-voice-scheduler/
 ├── server/
@@ -209,27 +209,24 @@ aria-voice-scheduler/
 
 ---
 
-## 🔑 Key Design Decisions
+## Key Design Decisions
 
-**Why OpenAI Realtime API?**  
+Why OpenAI Realtime API? 
 It provides end-to-end audio streaming (speech-in, speech-out) with native function calling. This eliminates the need to chain separate STT → LLM → TTS services, reducing latency to near real-time.
 
-**Why a server-side WebSocket proxy?**  
+Why a server-side WebSocket proxy?  
 The OpenAI Realtime API key cannot be safely exposed to the browser. The server acts as a proxy that injects the system prompt, tool definitions, and API key server-side — while transparently relaying audio in both directions.
 
-**Why Google Calendar API with a refresh token?**  
+Why Google Calendar API with a refresh token?  
 Unlike webhook-based integrations, the refresh token pattern allows the server to create events on behalf of the authorized user with zero user friction after the one-time OAuth setup.
 
 ---
 
 ## 👤 Author
 
-**Naga Tejaswini Popuri**  
+**Naga Tejaswini Popuri **
 Data Scientist & AI/Automation Engineer  
-[LinkedIn](https://linkedin.com/in/tejaswini-popuri) · [GitHub](https://github.com/tejaswini-popuri)
+[LinkedIn](https://www.linkedin.com/in/nagatejaswinipopuri/) · [GitHub](https://github.com/Tejaswini-np)
 
 ---
 
-## 📄 License
-
-MIT — use freely, credit appreciated.
