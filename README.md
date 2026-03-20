@@ -183,35 +183,18 @@ npm run dev
 
 ## 📸 Screenshots
 
-### Main Interface
-![ARIA Voice Agent UI showing the glowing blue orb, status indicator, and conversation transcript area]
+<img width="1440" height="900" alt="Screenshot 2026-03-19 at 3 41 52 PM" src="https://github.com/user-attachments/assets/567dec78-d9bc-42d8-8e62-bcf6535ba024" />
 
-### Active Conversation
-```
-ARIA:  Hi! I'm ARIA, your scheduling assistant. May I have your name?
-YOU:   Tejaswini
-ARIA:  Nice to meet you, Tejaswini! What date works best for your meeting?
-YOU:   This coming Friday
-ARIA:  Friday, March 21st — got it! And what time works for you?
-YOU:   3pm
-ARIA:  Perfect, 3:00 PM. What would you like to call this meeting?
-YOU:   Product sync
-ARIA:  So I'll schedule "Product sync" on Friday, March 21st at 3:00 PM Central Time. Does that sound right?
-YOU:   Yes
-ARIA:  Your event is on the calendar! "Product sync" is set for March 21st at 3 PM. Have a great meeting!
-```
+<img width="1440" height="900" alt="Screenshot 2026-03-19 at 3 41 49 PM" src="https://github.com/user-attachments/assets/09266cb8-6f9a-4463-80d6-25e72165c3e0" />
 
-### Event Created Confirmation Card
-![Green confirmation card showing event title, date, time, and "View in Google Calendar" link]
+<img width="1440" height="900" alt="Screenshot 2026-03-20 at 8 44 00 AM" src="https://github.com/user-attachments/assets/0a514679-1423-46cc-bb15-cfc56e893598" />
 
-### Google Calendar Event
-![Google Calendar showing the created "Product sync" event on March 21st at 3:00 PM]
+<img width="1440" height="900" alt="Screenshot 2026-03-20 at 8 44 10 AM" src="https://github.com/user-attachments/assets/8922f62e-f021-49b7-90cf-feee6ecf44dd" />
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
-```
 aria-voice-scheduler/
 ├── server/
 │   └── index.js          # Express + WebSocket proxy + Calendar integration
